@@ -49,6 +49,7 @@ class indexCreator:
         """
         with open(self.webFilesPath + "\\" + directoryNumber + "\\" + fileNumber,"rb") as f:
             soup = BeautifulSoup(f,"lxml")
+            f.close()
             tokenList = self._filterSoupText(soup.findAll(text=True))
             appendDict = self._createAppendDict(tokenList, directoryNumber + "/" + fileNumber)
             # for k,v in appendDict.items():
@@ -100,11 +101,16 @@ class indexCreator:
         """
 
         for token in appendDict.keys():
-            tupleToInsert=self._createPosting(token,appendDict,numberOfTokens)
+            resultTuple = self._createPosting(token,appendDict,numberOfTokens)
             if token not in self.invertedIndex:
-                self.invertedIndex[token] = [tupleToInsert]
+                self.invertedIndex[token] = [resultTuple[0]]
             else:
-                self.invertedIndex[token].append(tupleToInsert)
+                #update old Posting tf-idf's
+                for i in range(len(self.invertedIndex[token])):
+                    currentTf = self.invertedIndex[token][i][1]
+                    currentIdf = resultTuple[1]
+                    self.invertedIndex[token][i][2] = math.ceil(currentTf * currentIdf * 100)/100
+                self.invertedIndex[token].append(resultTuple[0])
 
     def _createPosting(self,token, appendDict, numberOfTokens):
         """
@@ -140,7 +146,7 @@ class indexCreator:
         tfidfScore = math.ceil(tokenTf * tokenIdf * 100) / 100
 
         tupleToInsert = Posting(tokenDocId, tokenTf, tfidfScore)
-        return tupleToInsert
+        return (tupleToInsert,tokenIdf) #return Idf incase old Postings need to be updated
 
     def _serializeIndex(self):
         """
