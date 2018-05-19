@@ -7,6 +7,7 @@ import string
 import nltk
 import re
 import math
+from collections import defaultdict
 from bs4 import BeautifulSoup
 from bs4.element import Comment
 from recordclass import recordclass
@@ -20,7 +21,7 @@ class indexCreator:
     def __init__(self, webFilesPath, indexPath):
         self.webFilesPath = webFilesPath
         self.indexPath = indexPath
-        self.invertedIndex = dict()
+        self.invertedIndex = defaultdict(list)
 
     def createIndex(self):
         self._traverseDirectory()
@@ -65,11 +66,11 @@ class indexCreator:
         """
         Filters the given text and returns a tokenized list
         """
-        visibleTextString = filter(self._isVisible, text)
+        visibleTextString = u''.join(filter(self._isVisible, text))
         printableText = ''.join(filter(lambda x: x in string.printable, visibleTextString))
         tokens = map(lambda x: x.lower(), nltk.word_tokenize(printableText))
         cleanString = ' '.join(filter(self._removeSymbols, tokens))
-        finalTokens = [x for x in nltk.word_tokenize(cleanString) if x not in nltk.corpus.stopwords.words('english')]
+        finalTokens = [x for x in nltk.word_tokenize(cleanString) if x not in nltk.corpus.stopwords.words("english")]
         return finalTokens
 
     #src: https://stackoverflow.com/questions/1936466/beautifulsoup-grab-visible-webpage-text?utm_medium=organic&utm_source=google_rich_qa&utm_campaign=google_rich_qa
@@ -104,18 +105,9 @@ class indexCreator:
         """
         Appends the appendDict to the main index.
         """
-
         for token in appendDict.keys():
             resultTuple = self._createPosting(token,appendDict,numberOfTokens)
-            if token not in self.invertedIndex:
-                self.invertedIndex[token] = [resultTuple[0]]
-            else:
-                #update old Posting tf-idf's
-                for i in range(len(self.invertedIndex[token])):
-                    currentTf = self.invertedIndex[token][i][1]
-                    currentIdf = resultTuple[1]
-                    self.invertedIndex[token][i][2] = math.ceil(currentTf * currentIdf * 100)/100
-                self.invertedIndex[token].append(resultTuple[0])
+            self.invertedIndex[token].append(resultTuple)
 
     def _createPosting(self,token, appendDict, numberOfTokens):
         """
@@ -137,16 +129,17 @@ class indexCreator:
         tokenTf = math.ceil(appendDict[token][1] / numberOfTokens * 100) / 100  # round to two decimal places
         tokenDocId = appendDict[token][0]
 
-        if token not in self.invertedIndex:
-            tokenIdf = math.ceil(math.log(self.numberOfDocuments/1)*100)/100 #because only 1 doc in index
-        else:
-            tokenIdf = math.ceil(math.log(self.numberOfDocuments / len(
-                self.invertedIndex[token]) + 1) * 100) / 100  # divided by number of documents with term in it
+        # if token not in self.invertedIndex:
+        #     tokenIdf = math.ceil(math.log(self.numberOfDocuments/1)*100)/100 #because only 1 doc in index
+        # else:
+        #     tokenIdf = math.ceil(math.log(self.numberOfDocuments / len(
+        #         self.invertedIndex[token]) + 1) * 100) / 100  # divided by number of documents with term in it
+        #
+        # tfidfScore = math.ceil(tokenTf * tokenIdf * 100) / 100
 
-        tfidfScore = math.ceil(tokenTf * tokenIdf * 100) / 100
-
-        tupleToInsert = Posting(tokenDocId, tokenTf, tfidfScore)
-        return (tupleToInsert,tokenIdf) #return Idf incase old Postings need to be updated
+        # tupleToInsert = Posting(tokenDocId, tokenTf, 0)
+        # return (tupleToInsert,tokenIdf) #return Idf incase old Postings need to be updated
+        return Posting(tokenDocId, tokenTf, 0)
 
     def _serializeIndex(self):
         """
