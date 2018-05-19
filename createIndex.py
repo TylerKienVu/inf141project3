@@ -25,6 +25,7 @@ class indexCreator:
 
     def createIndex(self):
         self._traverseDirectory()
+        self._calculateScores()
         self._serializeIndex()
 
     def _openJsonFile(self):
@@ -32,7 +33,9 @@ class indexCreator:
         Opens the json file and returns a dict that can indexed for the file name.
         ex: data[0/0] == <filename>
         """
+
         with open(self.webFilesPath +"\\bookkeeping.json") as f:
+        # with open(self.webFilesPath + "\\test.json") as f:
             data = json.load(f)
             return data
 
@@ -124,7 +127,7 @@ class indexCreator:
         IDF(t) = log(Total number of documents/Number of documents with term t in it)
         tf-idf score = tf x idf
         """
-        print("test")
+
         # calculate tuple items
         tokenTf = math.ceil(appendDict[token][1] / numberOfTokens * 100) / 100  # round to two decimal places
         tokenDocId = appendDict[token][0]
@@ -141,13 +144,28 @@ class indexCreator:
         # return (tupleToInsert,tokenIdf) #return Idf incase old Postings need to be updated
         return Posting(tokenDocId, tokenTf, 0)
 
+    def _calculateScores(self):
+        """
+        Calculates all of the tf-idf scores for each token at the end of traversing the dictionary.
+        """
+        print("Calculating tf-idf scores...")
+        for key in self.invertedIndex.keys():
+            tokenIdf = math.ceil(math.log(self.numberOfDocuments / len(self.invertedIndex[key])) * 100) / 100
+            for i in range(len(self.invertedIndex[key])):
+                postingTF = self.invertedIndex[key][i].tf
+                self.invertedIndex[key][i].tfidf = math.ceil(postingTF * tokenIdf * 100) / 100
+        print("Calculating done.")
+
+
     def _serializeIndex(self):
         """
         Opens the file specified at self.indexPath, Serializes the index into
         the file, and closes the file.
         """
+        print("Saving index to file...")
         with open(self.indexPath,"wb") as f:
             pickle.dump(self.invertedIndex,f, pickle.HIGHEST_PROTOCOL)
+            print("File saved at: " + self.indexPath)
 
 
 
@@ -156,6 +174,6 @@ if __name__ == "__main__":
     # First path is the directory with the webpages hierarchy
     # Second path is the file that that index will be serialized to
 
-    indexCreatorObject = indexCreator(r"C:\Users\Anthony\Documents\GitHub\WEBPAGES_RAW",
-                 r"C:\Users\Anthony\Documents\GitHub\inf141project3\index.pkl")
+    indexCreatorObject = indexCreator(r"C:\Users\tyler\Documents\GitHub\webpages\WEBPAGES_RAW",
+                 r"C:\Users\tyler\Documents\SourceTree\inf141project3\index.pkl")
     indexCreatorObject.createIndex()
