@@ -11,6 +11,11 @@ from bs4 import BeautifulSoup
 from bs4.element import Comment
 from recordclass import recordclass
 
+# creates the Posting class
+# identical to namedtuple, except it is mutable. This is useful for the rescoring of the
+# tf-idf scores of old postings
+Posting = recordclass("Posting", ["docId", "tf", "tfidf"])
+
 class indexCreator:
     def __init__(self, webFilesPath, indexPath):
         self.webFilesPath = webFilesPath
@@ -37,12 +42,12 @@ class indexCreator:
         jsonData = self._openJsonFile()
         #initialize this class variable for idf score calculating
         self.numberOfDocuments = len(jsonData.keys())
-        for key in jsonData.keys():
+        for key, value in jsonData.items():
             directoryNumber, fileNumber = key.split("/")
             print("Scraping file: " + key)
-            self._appendToIndex(directoryNumber, fileNumber)
+            self._appendToIndex(directoryNumber, fileNumber, value)
 
-    def _appendToIndex(self, directoryNumber, fileNumber):
+    def _appendToIndex(self, directoryNumber, fileNumber, url):
         """
         Takes the file path and appends the tokens parsed from the file into
         the inverted index.
@@ -60,11 +65,11 @@ class indexCreator:
         """
         Filters the given text and returns a tokenized list
         """
-        visibleTextString = u" ".join(filter(self._isVisible, text))
+        visibleTextString = filter(self._isVisible, text)
         printableText = ''.join(filter(lambda x: x in string.printable, visibleTextString))
         tokens = map(lambda x: x.lower(), nltk.word_tokenize(printableText))
         cleanString = ' '.join(filter(self._removeSymbols, tokens))
-        finalTokens = nltk.word_tokenize(cleanString)
+        finalTokens = [x for x in nltk.word_tokenize(cleanString) if x not in nltk.corpus.stopwords.words('english')]
         return finalTokens
 
     #src: https://stackoverflow.com/questions/1936466/beautifulsoup-grab-visible-webpage-text?utm_medium=organic&utm_source=google_rich_qa&utm_campaign=google_rich_qa
@@ -128,11 +133,6 @@ class indexCreator:
         tf-idf score = tf x idf
         """
 
-        #creates the Posting class
-        #identical to namedtuple, except it is mutable. This is useful for the rescoring of the
-        #tf-idf scores of old postings
-        Posting = recordclass("Posting", ["docId", "tf", "tfidf"])
-
         # calculate tuple items
         tokenTf = math.ceil(appendDict[token][1] / numberOfTokens * 100) / 100  # round to two decimal places
         tokenDocId = appendDict[token][0]
@@ -153,31 +153,8 @@ class indexCreator:
         Opens the file specified at self.indexPath, Serializes the index into
         the file, and closes the file.
         """
-        with open(self.indexPath,"w") as f:
-            pickle.dump(self.invertedIndex,f)
-
-class Tokens:
-
-    def __init__(self, docId, tf, url):
-        self.docId = docId
-        self.tf = tf
-        self.url = url
-        self.tfidf = 0
-
-    def getDocID(self):
-        return self.docId
-
-    def getTf(self):
-        return self.tf
-
-    def getUrl(self):
-        return self.url
-
-    def setTfidf(self, tfidf):
-        self.tfidf = tfidf
-
-    def getTfidf(self):
-        return self.tfidf
+        with open(self.indexPath,"wb") as f:
+            pickle.dump(self.invertedIndex,f, pickle.HIGHEST_PROTOCOL)
 
 
 
@@ -186,6 +163,6 @@ if __name__ == "__main__":
     # First path is the directory with the webpages hierarchy
     # Second path is the file that that index will be serialized to
 
-    indexCreatorObject = indexCreator(r"C:\Users\tyler\Documents\GitHub\webpages\WEBPAGES_RAW",
-                 r"C:\Users\tyler\Documents\GitHub\inf141project3\index.pkl")
+    indexCreatorObject = indexCreator(r"C:\Users\Anthony\Documents\GitHub\WEBPAGES_RAW",
+                 r"C:\Users\Anthony\Documents\GitHub\inf141project3\index.pkl")
     indexCreatorObject.createIndex()
