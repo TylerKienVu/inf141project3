@@ -156,6 +156,31 @@ class indexCreator:
         with open(self.indexPath,"w") as f:
             pickle.dump(self.invertedIndex,f)
 
+class Tokens:
+
+    def __init__(self, docId, tf, url):
+        self.docId = docId
+        self.tf = tf
+        self.url = url
+        self.tfidf = 0
+
+    def getDocID(self):
+        return self.docId
+
+    def getTf(self):
+        return self.tf
+
+    def getUrl(self):
+        return self.url
+
+    def setTfidf(self, tfidf):
+        self.tfidf = tfidf
+
+    def getTfidf(self):
+        return self.tfidf
+
+
+
 if __name__ == "__main__":
     # Change file path to path on your computer
     # First path is the directory with the webpages hierarchy
