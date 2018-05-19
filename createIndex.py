@@ -64,7 +64,7 @@ class indexCreator:
 
     def _filterSoupText(self,text):
         """
-        Filters the given text and returns a tokenized list
+        Filters the given text and returns a tokenized list. Filter Optimization 
         """
         visibleTextString = u''.join(filter(self._isVisible, text))
         printableText = ''.join(filter(lambda x: x in string.printable, visibleTextString))
