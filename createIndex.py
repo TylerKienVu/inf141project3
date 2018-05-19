@@ -124,7 +124,7 @@ class indexCreator:
         IDF(t) = log(Total number of documents/Number of documents with term t in it)
         tf-idf score = tf x idf
         """
-
+        print("test")
         # calculate tuple items
         tokenTf = math.ceil(appendDict[token][1] / numberOfTokens * 100) / 100  # round to two decimal places
         tokenDocId = appendDict[token][0]
