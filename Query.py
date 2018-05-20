@@ -6,7 +6,9 @@ Posting = recordclass("Posting", ["docId", "tf", "tfidf"])
 
 def start():
     index = loadIndex(r"finishedIndex.pkl")
-    urlDict = loadURLDictionary(r"C:\Users\tyler\Documents\GitHub\webpages\WEBPAGES_RAW\bookkeeping.json")
+    urlDict = loadURLDictionary(r"C:\Users\Anthony\Documents\GitHub\WEBPAGES_RAW\bookkeeping.json")
+    print("Number of documents in the corpus: " + str(len(urlDict)))
+    print("Number of unique tokens: " + str(len(index)))
     startQueryLoop(index, urlDict)
 
 def loadIndex(filePath):
@@ -29,7 +31,10 @@ def loadURLDictionary(filePath):
 def startQueryLoop(index, urlDict):
     while(True):
         queryWord = input("\nPlease type in a word to query: ").lower()
-        result = index[queryWord]
+        result = []
+        for words in queryWord.split():
+            result.extend(index[words])
+
         if result != []:
             #meta data
             totalLinks = len(result)
