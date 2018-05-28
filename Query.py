@@ -1,12 +1,13 @@
 import pickle
 import json
 import math
+from collections import defaultdict
 from recordclass import recordclass
 Posting = recordclass("Posting", ["docId", "tf", "tfidf"])
 
 def start():
     index = loadIndex(r"finishedIndex.pkl")
-    urlDict = loadURLDictionary(r"C:\Users\Anthony\Documents\GitHub\WEBPAGES_RAW\bookkeeping.json")
+    urlDict = loadURLDictionary(r"C:\Users\Tyler\Documents\GitHub\webpages\WEBPAGES_RAW\bookkeeping.json")
     print("Number of documents in the corpus: " + str(len(urlDict)))
     print("Number of unique tokens: " + str(len(index)))
     startQueryLoop(index, urlDict)
@@ -23,21 +24,20 @@ def loadURLDictionary(filePath):
     Opens the json file and returns a dict that can indexed for the file name.
     ex: data[0/0] == <filename>
     """
-
     with open(filePath) as f:
         data = json.load(f)
         return data
 
 def startQueryLoop(index, urlDict):
     while(True):
-        queryWord = input("\nPlease type in a word to query: ").lower()
-        result = []
-        for words in queryWord.split():
-            result.extend(index[words])
+        maxQueryReturnSize = getQueryParameter()
+        queryWord = input("\nPlease type in a query: ").lower()
+        rankedList = rankDocuments(index, queryWord, maxQueryReturnSize)
 
-        if result != []:
+
+        if rankedList != []:
             #meta data
-            totalLinks = len(result)
+            totalLinks = len(rankedList)
             linkCounter = 0
             currentPage = 1
             totalPages = math.ceil(totalLinks/5)
@@ -45,12 +45,12 @@ def startQueryLoop(index, urlDict):
             print("Your query matched " + str(totalLinks) + " pages.")
             print("The following pages match the query (page: " +
                   str(currentPage) + "/" + str(totalPages) + "): ")
-            for i in range(len(result)):
+            for i in range(len(rankedList)):
                 #display first 5 pages
                 if linkCounter < 5:
                     totalLinks -= 1
                     linkCounter += 1
-                    docId = result[i][0]
+                    docId = rankedList[i]
                     print("{:7}: {}".format(docId,urlDict[docId]))
 
                 #ask if user wants to see another page or enter another query
@@ -69,7 +69,7 @@ def startQueryLoop(index, urlDict):
                             #print next page because it is still in the loop
                             totalLinks -= 1
                             linkCounter += 1
-                            docId = result[i][0]
+                            docId = rankedList[i]
                             print("{:7}: {}".format(docId, urlDict[docId]))
 
                         elif command == "n":
@@ -80,6 +80,52 @@ def startQueryLoop(index, urlDict):
                         break
         else:
             print("There were no pages that match that query.")
+
+def getQueryParameter():
+    isValidParameter = False
+    while not isValidParameter:
+        queryParameter = input(
+            "\nPlease specify the max number of results to return (Enter nothing to return all results): ")
+        if queryParameter == "":
+            return "MAX"
+        try:
+            convertedParameter = int(queryParameter)
+            return convertedParameter
+        except ValueError:
+            print("\"" + queryParameter + "\" is not a valid parameter. Only integers are allowed.")
+
+
+
+
+def rankDocuments(index, query, maxQueryReturnSize):
+    """
+    Takes in the query words and returns a list of doc Ids that are ranked based on tf-idf score.
+    The score dict will total up the tf-idf's of each doc so that the list of docs can be sorted.
+    """
+    scoreDict = defaultdict(float)
+    rankedList = []
+    for word in query.split():
+        #grab postings for the token in the query
+        postingList = index[word]
+        for posting in postingList:
+            #puts docId as key and totals up the tf-idf scores for that doc
+            scoreDict[posting[0]] += posting[2]
+
+            #puts docId in list to be sorted
+            rankedList.append(posting[0])
+    
+    #sorts the ranked list based on their total tf-idf score
+    rankedList.sort(key=lambda x: scoreDict[x], reverse=True)
+
+    #if you want to see the top 10 scores
+    # for i in range(10):
+    #     print(scoreDict[rankedList[i]])
+
+    if type(maxQueryReturnSize) == int:
+        return rankedList[0:maxQueryReturnSize]
+    return rankedList
+
+
 
 if __name__ == "__main__":
     start()
